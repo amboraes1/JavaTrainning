@@ -8,7 +8,9 @@ import java.io.IOException;
 import java.io.Writer;
 import java.math.BigDecimal;
 import java.math.RoundingMode;
+import java.util.function.Consumer;
 import java.util.function.Supplier;
+import java.util.function.UnaryOperator;
 
 import static org.apache.commons.lang3.StringUtils.CR;
 import static org.apache.commons.lang3.StringUtils.LF;
@@ -32,19 +34,15 @@ public class Main
 		}
 
 		// TODO change this annonymous inner class expression to a lambda expression
-		printer = new Printer<String>()
-		{
-			@Override
-			public void print(Measure<String> measure, Writer writer) throws IOException
+		printer = (measure,writer) ->
 			{
 				writer.write("---" + LF + CR);
 				writer.write("Station " + measure.getStationId() + LF + CR + LF + CR);
 				// TODO change these lambdas to method reference
-				printValue(() -> measure.getHumidity(), "Humidity", writer);
-				printValue(() -> measure.getWindSpeed(), "Wind speed", writer);
-				printValue(() -> measure.getPressure(), "Pressure", writer);
-				printValue(() -> measure.getTemperature(), "Temperature", writer);
-			}
+				printValue(measure::getHumidity, "Humidity", writer);
+				printValue(measure::getWindSpeed, "Wind speed", writer);
+				printValue(measure::getPressure, "Pressure", writer);
+				printValue(measure::getTemperature, "Temperature", writer);
 		};
 	}
 
@@ -84,11 +82,15 @@ public class Main
 		 * You would call the makeItReadable method from that method
 		 * Eg: myMethod(measure::getHumidity, result::setHumidity, "unit")
 		 */
-		result.setWindSpeed(makeItReadable(measure.getWindSpeed(), "mph"));
-		result.setTemperature(makeItReadable(measure.getTemperature(), "°C"));
-		result.setPressure(makeItReadable(measure.getPressure(), "pa"));
-		result.setHumidity(makeItReadable(measure.getHumidity(), "%"));
+		setGet(measure::getWindSpeed,result::setWindSpeed,"mph");
+		setGet(measure::getTemperature,result::setTemperature,"°C");
+		setGet(measure::getPressure,result::setPressure,"pa");
+		setGet(measure::getHumidity,result::setHumidity,"%");
 		return result;
+	}
+
+	protected void setGet(Supplier<BigDecimal> getter, Consumer<String> setter, String unit){
+		setter.accept(makeItReadable(getter.get(),unit));
 	}
 
 

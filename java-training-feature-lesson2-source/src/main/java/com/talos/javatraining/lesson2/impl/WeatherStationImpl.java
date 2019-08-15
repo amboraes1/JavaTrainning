@@ -24,7 +24,7 @@ public class WeatherStationImpl implements WeatherStation
 	public Measure<BigDecimal> read()
 	{
 		// TODO change this lambda expression to method reference
-		return createMeasure((max, min) -> generateValue(max, min));
+		return createMeasure(this::generateValue);
 	}
 
 	@Override
