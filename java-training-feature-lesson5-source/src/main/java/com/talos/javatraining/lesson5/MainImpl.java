@@ -2,10 +2,14 @@ package com.talos.javatraining.lesson5;
 
 import com.talos.javatraining.lesson5.data.OrderData;
 import com.talos.javatraining.lesson5.data.OrderEntryData;
+import com.talos.javatraining.lesson5.data.PriceData;
 import com.talos.javatraining.lesson5.data.ProductData;
 import java.math.BigDecimal;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 /**
@@ -17,170 +21,90 @@ public class MainImpl implements Main
 	@Override
 	public boolean isThereAnOrderWithPriceLowerThan(List<OrderData> orders, BigDecimal price)
 	{
-		boolean result = false;
-		for (OrderData order : orders)
-		{
-			if (order.getSubTotal().getValue().compareTo(price) < 0)
-			{
-				result = true;
-				break;
-			}
-		}
-		return result;
+		return orders.stream().anyMatch(o -> o.getSubTotal().getValue().compareTo(price) < 0);
 	}
 
 	@Override
 	public boolean areThereAllOrdersWithPriceGreaterThan(List<OrderData> orders, BigDecimal price)
 	{
-		boolean result = true;
-		for (OrderData order : orders)
-		{
-			if (order.getSubTotal().getValue().compareTo(price) <= 0)
-			{
-				// If there is only one lower or equal than the given price, it is false
-				result = false;
-				break;
-			}
-		}
-		return result;
+		return orders.stream().noneMatch(o -> o.getSubTotal().getValue().compareTo(price) <= 0);
 	}
 
 	@Override
 	public BigDecimal getLowestOrderPrice(List<OrderData> orders)
 	{
-		BigDecimal result = null;
-		for (OrderData order : orders)
-		{
-			BigDecimal currentPrice = order.getSubTotal().getValue();
-			if (result == null || currentPrice.compareTo(result) < 0)
-			{
-				result = currentPrice;
-			}
-		}
-		return result;
+		return orders.stream().map(o->o.getSubTotal().getValue()).min(BigDecimal::compareTo).orElse(null);
 	}
 
 	@Override
 	public BigDecimal getHighestOrderPrice(List<OrderData> orders)
 	{
-		BigDecimal result = null;
-		for (OrderData order : orders)
-		{
-			BigDecimal currentPrice = order.getSubTotal().getValue();
-			if (result == null || currentPrice.compareTo(result) > 0)
-			{
-				result = currentPrice;
-			}
-		}
-		return result;
+		return orders.stream().map(o->o.getSubTotal().getValue()).max(BigDecimal::compareTo).orElse(null);
 	}
 
 	@Override
 	public long countOrdersWithPriceGreaterThan(List<OrderData> orders, BigDecimal price)
 	{
-		long count = 0;
-		for (OrderData order : orders)
-		{
-			if (order.getSubTotal().getValue().compareTo(price) > 0)
-			{
-				count++;
-			}
-		}
-		return count;
+		return orders.stream().map(o->o.getSubTotal().getValue()).filter(o->o.compareTo(price)>0).count();
 	}
 
 	@Override
 	public BigDecimal sumOrderPricesWithPriceLowerThan(List<OrderData> orders, BigDecimal price)
 	{
-		BigDecimal total = BigDecimal.ZERO;
-		for (OrderData order : orders)
-		{
-			BigDecimal currentPrice = order.getSubTotal().getValue();
-			if (currentPrice.compareTo(price) < 0)
-			{
-				total = total.add(currentPrice);
-			}
-		}
-		return total;
+		return orders
+				.stream()
+				.map(o->o.getSubTotal().getValue())
+				.filter(o->o.compareTo(price)<0)
+				.reduce(BigDecimal::add)
+				.orElse(BigDecimal.ZERO);
 	}
 
 	@Override
 	public long countAllEntriesWithPriceGreaterThan(List<OrderData> orders, BigDecimal price)
 	{
-		long count = 0;
-		for (OrderData order : orders)
-		{
-			for (OrderEntryData entry : order.getEntries())
-			{
-				if (entry.getBasePrice().getValue().compareTo(price) > 0)
-				{
-					count++;
-				}
-			}
-		}
-		return count;
+		return orders
+				.stream()
+				.map(OrderData::getEntries)
+				.flatMap(x->x.stream())
+				.map(o->o.getBasePrice().getValue())
+				.filter(x->x.compareTo(price)>0)
+				.count();
 	}
 
 	@Override
 	public long countEntriesWithProduct(List<OrderData> orders, String productCode)
 	{
-		long count = 0;
-		for (OrderData order : orders)
-		{
-			for (OrderEntryData entry : order.getEntries())
-			{
-				ProductData productData = entry.getProduct();
-				if (productData.getCode().equals(productCode))
-				{
-					count++;
-				}
-			}
-		}
-		return count;
+		return orders.stream()
+				.map(x->x.getEntries())
+				.flatMap(x->x.stream())
+				.map(x->x.getProduct().getCode())
+				.filter(x->x.equals(productCode))
+				.count();
 	}
 
 	@Override
 	public long sumQuantitiesForProduct(List<OrderData> orders, String productCode)
 	{
-		long total = 0;
-		for (OrderData order : orders)
-		{
-			for (OrderEntryData entry : order.getEntries())
-			{
-				ProductData productData = entry.getProduct();
-				if (productData.getCode().equals(productCode))
-				{
-					total += getQty(entry);
-				}
-			}
-		}
-		return total;
+		return orders
+				.stream()
+				.map(OrderData::getEntries)
+				.flatMap(x->x.stream())
+				.filter(x->x.getProduct().getCode().equals(productCode))
+				.map(x->x.getQuantity())
+				.reduce(Long::sum)
+				.orElse(0L);
 	}
 
 	@Override
 	public long getMaxQuantityOrderedForProduct(List<OrderData> orders, String productCode)
 	{
-		long max = 0;
-		for (OrderData order : orders)
-		{
-			for (OrderEntryData entry : order.getEntries())
-			{
-				ProductData productData = entry.getProduct();
-				if (productData.getCode().equals(productCode))
-				{
-					long quantity = getQty(entry);
-					if (quantity > max)
-					{
-						max = quantity;
-					}
-				}
-			}
-		}
-		return max;
-	}
-
-	private long getQty(OrderEntryData entry)
-	{
-		return Optional.ofNullable(entry.getQuantity()).orElse(0L);
+		return orders
+				.stream()
+				.map(OrderData::getEntries)
+				.flatMap(x->x.stream())
+				.filter(x->x.getProduct().getCode().equals(productCode))
+				.map(x->x.getQuantity())
+				.max(Long::compareTo)
+				.orElse(0L);
 	}
 }
