@@ -26,11 +26,8 @@ public class Calculator
 	public Calculator(EventBus eventBus)
 	{
 		strategies = new HashMap<>();
-		strategies.put("scientific",new CalculatorTemplate((val)-> {DecimalFormat formatter = new DecimalFormat("0.00E00");
-		formatter.setRoundingMode(RoundingMode.HALF_UP);
-		formatter.setMinimumFractionDigits(10);
-		return formatter.format(val);}));
-		strategies.put("basic",new CalculatorTemplate((val)->val.setScale(5, RoundingMode.HALF_UP).toString()));
+		strategies.put("scientific",new CalculatorTemplate(this::scientific));
+		strategies.put("basic",new CalculatorTemplate(this::basic));
 		this.eventBus = eventBus;
 		eventBus.register(EventType.ADD, args -> calculate(getStrategy()::add, args));
 		eventBus.register(EventType.SUBTRACT, args -> calculate(getStrategy()::subtract, args));
@@ -38,6 +35,17 @@ public class Calculator
 		eventBus.register(EventType.DIVIDE, args -> calculate(getStrategy()::divide, args));
 		eventBus.register(EventType.CHANGE_MODE, this::changeMode);
 
+	}
+
+	public String basic(BigDecimal val){
+		return val.setScale(5, RoundingMode.HALF_UP).toString();
+	}
+
+	public String scientific(BigDecimal val){
+		DecimalFormat formatter = new DecimalFormat("0.00E00");
+		formatter.setRoundingMode(RoundingMode.HALF_UP);
+		formatter.setMinimumFractionDigits(10);
+		return formatter.format(val);
 	}
 
 	private CalculatorStrategy getStrategy()
